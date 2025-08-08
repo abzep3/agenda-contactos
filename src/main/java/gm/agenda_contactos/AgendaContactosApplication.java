@@ -10,10 +10,14 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.FilterWriter;
+import java.io.IOException;
 import java.util.List;
 import java.util.Scanner;
 
-@SpringBootApplication
+//@SpringBootApplication
 public class AgendaContactosApplication implements CommandLineRunner { //4
 
 	@Autowired
@@ -46,6 +50,35 @@ public class AgendaContactosApplication implements CommandLineRunner { //4
 		}
 	}
 
+	//metodo para exportar los contactos a un CSV
+	private void exportarContactosCSV(String nombreArchivo) {
+		List<Contacto> contactos = contactoServicio.listarContactos();
+
+		String escritorio = System.getProperty("user.home") + "/Desktop/";
+		String rutaArchivo = escritorio + nombreArchivo;
+
+		try (BufferedWriter writer = new BufferedWriter(new FileWriter(rutaArchivo))) {
+			writer.write("Id,Nombre,Telefono,Email,Direccion");
+			writer.newLine();
+
+			for (Contacto contacto : contactos) {
+				String linea = String.format("%d,%s,%s,%s,%s",
+						contacto.getId(),
+						contacto.getNombre(),
+						contacto.getTelefono(),
+						contacto.getEmail(),
+						contacto.getDireccion());
+				writer.write(linea);
+				writer.newLine();
+			}
+
+			logger.info("Exportación completada con éxito ✅");
+
+		} catch (IOException e) {
+			logger.error("Error al exportar contactos", e);
+		}
+	}
+
 	private int mostrarMenu(Scanner consola){
 		logger.info("""
 		\n*** Agenda Contactos ***
@@ -55,6 +88,7 @@ public class AgendaContactosApplication implements CommandLineRunner { //4
 		4. Modificar Contacto
 		5. Eliminar Contacto
 		6. Salir
+		7. Exportar contacto
 		Elige una opción:\s""");
 		var opcion = Integer.parseInt(consola.nextLine());
 		return opcion;
@@ -135,6 +169,12 @@ public class AgendaContactosApplication implements CommandLineRunner { //4
 			case 6 -> {
 				logger.info("Hasta pronto!" + nl + nl);
 				salir = true;
+			}
+			case 7 -> {
+				logger.info(nl + "--- Exportar Contactos ---" + nl);
+				logger.info("Nombre del archivo: ");
+				var nombreArchivo = consola.nextLine();
+				exportarContactosCSV(nombreArchivo);
 			}
 			default ->  logger.info("Opción NO reconocida: " + opcion + nl);
 		}
