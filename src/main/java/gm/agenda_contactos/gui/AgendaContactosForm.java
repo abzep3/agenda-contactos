@@ -10,6 +10,8 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 @Component
 public class AgendaContactosForm extends JFrame{
@@ -24,12 +26,23 @@ public class AgendaContactosForm extends JFrame{
     private JButton limpiarButton;
     IContactoServicio contactoServicio;
     private DefaultTableModel tablaModeloContactos;
+    private Integer idContacto;
 
     @Autowired
     public AgendaContactosForm(ContactoServicio contactoServicio){
         this.contactoServicio = contactoServicio;
         iniciarForm();
         guardarButton.addActionListener(e -> guardarContacto());
+        limpiarButton.addActionListener(e -> limpiarFormulario());
+        eliminarButton.addActionListener(e -> eliminarContacto());
+        contactosTabla.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                super.mouseClicked(e);
+                cargarContactosSeleccionados();
+            }
+        });
+
 
     }
 
@@ -42,7 +55,12 @@ public class AgendaContactosForm extends JFrame{
 
     private void createUIComponents() {
         // TODO: place custom component creation code here
-        this.tablaModeloContactos = new DefaultTableModel(0, 5);
+        this.tablaModeloContactos = new DefaultTableModel(0, 5){
+            @Override
+            public boolean isCellEditable(int row, int column){
+                return false;
+            }
+        };
         String[] cabeceros = {"id", "nombre", "telefono", "email", "direccion"};
         this.tablaModeloContactos.setColumnIdentifiers(cabeceros);
         this.contactosTabla = new JTable(tablaModeloContactos);
@@ -82,13 +100,43 @@ public class AgendaContactosForm extends JFrame{
         var email = textoEmail.getText();
         var direccion = textoDireccion.getText();
         var contacto = new Contacto();
-        contacto.getNombre();
-        contacto.getTelefono();
-        contacto.getEmail();
-        contacto.getDireccion();
+        contacto.setNombre(nombre);
+        contacto.setTelefono(telefono);
+        contacto.setEmail(email);
+        contacto.setDireccion(direccion);
         this.contactoServicio.guardarContacto(contacto); //insertar los datos en la lista
         limpiarFormulario();
         listarContactos();
+    }
+
+    private void eliminarContacto(){
+        var renglon = contactosTabla.getSelectedRow();
+        if(renglon!= -1){
+            var idContactoStr = contactosTabla.getModel().getValueAt(renglon, 0).toString();
+            this.idContacto = Integer.parseInt(idContactoStr);
+            var contacto = new Contacto();
+            contacto.setId(this.idContacto);
+            contactoServicio.eliminarContacto(contacto);
+            mostrarMensaje("Contacto con id" + this.idContacto + " eliminado");
+            limpiarFormulario();
+            listarContactos();
+        }
+    }
+
+    private void cargarContactosSeleccionados(){
+        var renglon = contactosTabla.getSelectedRow();
+        if(renglon != -1){
+            var id = contactosTabla.getModel().getValueAt(renglon, 0).toString();
+            this.idContacto = Integer.parseInt(id);
+            var nombre = contactosTabla.getModel().getValueAt(renglon, 1).toString();
+            this.textoNombre.setText(nombre);
+            var telefono = contactosTabla.getModel().getValueAt(renglon, 2).toString();
+            this.textoTelefono.setText(telefono);
+            var email = contactosTabla.getModel().getValueAt(renglon, 3).toString();
+            this.textoEmail.setText(email);
+            var direccion = contactosTabla.getModel().getValueAt(renglon, 4).toString();
+            this.textoDireccion.setText(direccion);
+        }
     }
 
     private void limpiarFormulario(){
@@ -96,6 +144,8 @@ public class AgendaContactosForm extends JFrame{
         textoTelefono.setText("");
         textoEmail.setText("");
         textoDireccion.setText("");
+        this.idContacto=null;
+        this.contactosTabla.getSelectionModel().clearSelection();
     }
 
     private void mostrarMensaje(String mensaje){
